@@ -42,14 +42,7 @@ def load_data(filename):
             contractors.append(row)
 
     return contractors
-    contractors = []
-
-    with open(filename, "r", encoding="utf-8") as file:
-        for line in file:
-            if line.strip():
-                contractors.append(json.loads(line))
-
-    return contractors
+    
 
 
 def normalize(text):
