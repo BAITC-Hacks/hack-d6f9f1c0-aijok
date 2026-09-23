@@ -1,105 +1,70 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="EventMatch AI — подбор event-подрядчиков по параметрам мероприятия">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EventMatch AI — демонстрационный подбор event-подрядчиков">
   <title>EventMatch AI — умный подбор подрядчиков</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="EventMatch AI, на главную">
-      <span class="brand-mark">E</span><span>EventMatch <b>AI</b></span>
-    </a>
-    <span class="dataset-pill"><i></i> 66 проверенных профилей</span>
+  <header class="topbar" id="home">
+    <a class="brand" href="#home" aria-label="EventMatch AI, на главную"><span class="brand-mark">E</span><span>EventMatch <b>AI</b></span></a>
+    <nav aria-label="Основная навигация">
+      <a href="#home">Главная</a><a href="#how">Как это работает</a><a href="#about">О сервисе</a><a href="#assistant">ИИ-ассистент</a>
+    </nav>
+    <div class="account-links">
+      {% if session.user %}<span>{{ session.user.name }}</span><form action="{{ url_for('logout') }}" method="post"><button>Выйти</button></form>
+      {% else %}<a href="{{ url_for('auth', mode='login') }}">Войти</a><a class="register-link" href="{{ url_for('auth', mode='register') }}">Регистрация</a>{% endif %}
+    </div>
   </header>
 
   <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
     <section class="hero">
-      <div class="eyebrow">Подбор без случайностей</div>
-      <h1>Умный подбор<br><span>event-подрядчиков</span></h1>
-      <p>Укажите параметры события — мы проверим доступность, бюджет и формат и покажем до трёх наиболее подходящих исполнителей.</p>
+      <div class="eyebrow">Подбор без случайностей</div><h1>Умный подбор<br><span>event-подрядчиков</span></h1>
+      <p>Укажите параметры события — мы проверим доступность, бюджет и формат и покажем до трёх наиболее подходящих исполнителей. Регистрация для подбора не нужна.</p>
     </section>
-
     <section class="search-panel" aria-labelledby="form-heading">
-      <div class="panel-heading">
-        <div><span class="step">01</span><h2 id="form-heading">Расскажите о мероприятии</h2></div>
-        <p><span>*</span> Обязательные поля</p>
-      </div>
-      <form method="post" action="#results" id="match-form">
-        <div class="form-grid">
-          <label><span>Город <em>*</em></span>
-            <select name="city" required><option value="" disabled {% if not form.city %}selected{% endif %}>Выберите город</option>{% for item in cities %}<option value="{{ item }}" {% if form.city == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
-          </label>
-          <label><span>Дата мероприятия <em>*</em></span>
-            <input name="event_date" type="date" min="{{ date_min }}" max="{{ date_max }}" value="{{ form.event_date or '' }}" required>
-          </label>
-          <label><span>Тип мероприятия <em>*</em></span>
-            <select name="event_format" required><option value="" disabled {% if not form.event_format %}selected{% endif %}>Выберите формат</option>{% for item in event_formats %}<option value="{{ item }}" {% if form.event_format == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select>
-          </label>
-          <label><span>Категория подрядчика <em>*</em></span>
-            <select name="category" required><option value="" disabled {% if not form.category %}selected{% endif %}>Кого ищете?</option>{% for item in categories %}<option value="{{ item }}" {% if form.category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
-          </label>
-          <label><span>Бюджет, ₸ <em>*</em></span>
-            <input name="budget" type="number" min="1" step="1000" placeholder="Например, 1 000 000" value="{{ form.budget or '' }}" required>
-          </label>
-          <label><span>Длительность, часов</span>
-            <input name="duration" type="number" min="0.5" max="24" step="0.5" placeholder="Например, 6" value="{{ form.duration or '' }}">
-          </label>
-          <label><span>Предпочтительный язык</span>
-            <select name="language"><option value="">Не имеет значения</option>{% for item in languages %}<option value="{{ item }}" {% if form.language == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select>
-          </label>
-          <button class="submit" type="submit"><span>Подобрать подрядчиков</span><b>→</b></button>
-        </div>
-      </form>
+      <div class="panel-heading"><div><span class="step">01</span><h2 id="form-heading">Расскажите о мероприятии</h2></div><p><span>*</span> Обязательные поля</p></div>
+      <form method="post" action="#results" id="match-form"><div class="form-grid">
+        <label><span>Город <em>*</em></span><select name="city" required><option value="" disabled {% if not form.city %}selected{% endif %}>Выберите город</option>{% for item in cities %}<option value="{{ item }}" {% if form.city == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+        <label><span>Дата мероприятия <em>*</em></span><input name="event_date" type="date" min="{{ date_min }}" max="{{ date_max }}" value="{{ form.event_date or '' }}" required></label>
+        <label><span>Тип мероприятия <em>*</em></span><select name="event_format" required><option value="" disabled {% if not form.event_format %}selected{% endif %}>Выберите формат</option>{% for item in event_formats %}<option value="{{ item }}" {% if form.event_format == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select></label>
+        <label><span>Категория подрядчика <em>*</em></span><select name="category" required><option value="" disabled {% if not form.category %}selected{% endif %}>Кого ищете?</option>{% for item in categories %}<option value="{{ item }}" {% if form.category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+        <label><span>Бюджет, ₸ <em>*</em></span><input name="budget" type="number" min="1" step="1" placeholder="Например, 1 000 000" value="{{ form.budget or '' }}" required></label>
+        <label><span>Длительность, часов</span><input name="duration" type="number" min="0.5" max="24" step="0.5" placeholder="Например, 6" value="{{ form.duration or '' }}"></label>
+        <label><span>Предпочтительный язык</span><select name="language"><option value="">Не имеет значения</option>{% for item in languages %}<option value="{{ item }}" {% if form.language == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select></label>
+        <button class="submit" type="submit"><span>Подобрать подрядчиков</span><b>→</b></button>
+      </div></form>
     </section>
-
     <section class="results" id="results" aria-live="polite">
       {% if error %}<div class="notice error"><span>!</span><div><h2>Проверьте параметры</h2><p>{{ error }}</p></div></div>{% endif %}
       {% if result %}
         {% if result.state == 'found' %}
-          <div class="results-heading"><div><span class="step">02</span><h2>Подходящие подрядчики</h2></div><p>Найдено: <b>{{ result.eligible_count }}</b></p></div>
+          <div class="results-heading"><div><span class="step">02</span><h2>Подходящие подрядчики</h2></div><p>{{ result.event_date_display }} · Найдено: <b>{{ result.eligible_count }}</b></p></div>
           {% if result.eligible_count < 3 %}<div class="notice compact"><span>i</span><p>Это все подходящие профили ({{ result.eligible_count }}): остальные подрядчики этой категории не прошли обязательные условия.</p></div>{% endif %}
-          <div class="cards">
-          {% for item in result.results %}
-            <article class="card">
-              <div class="card-top">
-                <div class="avatar">{{ item.name[0] }}</div>
-                <div class="identity"><div class="category">{{ item.categories|join(' · ') }}</div><h3>{{ item.name }}</h3><div class="location">⌖ {{ item.city }}</div></div>
-                {% if item.synthetic %}<span class="synthetic">Синтетический профиль</span>{% endif %}
-              </div>
-              <div class="price"><small>Стоимость от</small><strong>{{ "{:,}".format(item.price).replace(',', ' ') }} ₸</strong></div>
-              <dl class="facts">
-                <div><dt>Форматы</dt><dd>{% for value in item.event_formats %}<span>{{ value }}</span>{% endfor %}</dd></div>
-                <div><dt>Языки</dt><dd>{% for value in item.languages %}<span>{{ value }}</span>{% endfor %}</dd></div>
-                {% if item.max_hours is not none %}<div><dt>Максимальная длительность</dt><dd><b>{{ item.max_hours|int if item.max_hours == item.max_hours|int else item.max_hours }} часов</b></dd></div>{% endif %}
-              </dl>
-              <div class="why"><h4><span>✓</span> Почему подходит</h4><p>{{ item.explanation }}</p></div>
-              <div class="score" title="Детерминированная оценка соответствия"><span>Совпадение</span><b>{{ item.score|round|int }} / 100</b></div>
-            </article>
-          {% endfor %}
-          </div>
-        {% elif result.state == 'no_category_in_city' %}
-          <div class="notice empty"><span>⌕</span><div><h2>В этом городе категория не представлена</h2><p>В выбранном городе пока нет подрядчиков категории «{{ form.category }}». Попробуйте выбрать другой город или категорию.</p></div></div>
-        {% else %}
-          <div class="notice empty"><span>⌕</span><div><h2>Подрядчики есть, но условия не совпали</h2><p>Мы проверили {{ result.local_count }} профилей категории «{{ form.category }}» в городе {{ form.city }}.</p></div></div>
-          <div class="stats">
-            <div><b>{{ result.exclusions.busy }}</b><span>заняты в эту дату</span></div>
-            <div><b>{{ result.exclusions.format }}</b><span>не работают с форматом</span></div>
-            <div><b>{{ result.exclusions.budget }}</b><span>превышают бюджет</span></div>
-            <div><b>{{ result.exclusions.duration }}</b><span>не подходят по длительности</span></div>
-          </div>
-          <p class="stats-note">Один профиль может учитываться сразу в нескольких причинах.</p>
-        {% endif %}
+          <div class="cards">{% for item in result.results %}<article class="card">
+            <div class="card-top"><div class="avatar">{{ item.name[0] }}</div><div class="identity"><div class="category">{{ item.categories|join(' · ') }}</div><h3>{{ item.name }}</h3><div class="location">⌖ {{ item.city }}</div></div>{% if item.synthetic %}<span class="synthetic">Синтетический профиль</span>{% endif %}</div>
+            <div class="price"><small>Стоимость от</small><strong>{{ "{:,}".format(item.price).replace(',', ' ') }} ₸</strong></div>
+            <dl class="facts"><div><dt>Форматы</dt><dd>{% for value in item.event_formats %}<span>{{ value }}</span>{% endfor %}</dd></div><div><dt>Языки</dt><dd>{% for value in item.languages %}<span>{{ value }}</span>{% endfor %}</dd></div>{% if item.max_hours is not none %}<div><dt>Макс. длительность</dt><dd><b>{{ item.max_hours|int if item.max_hours == item.max_hours|int else item.max_hours }} часов</b></dd></div>{% endif %}</dl>
+            <div class="why"><h4><span>✓</span> Почему подходит</h4><p>{{ item.explanation }}</p></div>
+            <div class="score" title="Детерминированная оценка соответствия"><span>Совпадение</span><b>{{ item.score|round|int }} / 100</b></div>
+            <div class="contact-actions"><button type="button" data-demo-contact="message">Написать</button><button type="button" data-demo-contact="call">Позвонить</button></div><p class="contact-note" aria-live="polite">+7 (***) ***-**-**</p>
+          </article>{% endfor %}</div>
+        {% elif result.state == 'no_category_in_city' %}<div class="notice empty"><span>⌕</span><div><h2>В этом городе категория не представлена</h2><p>На {{ result.event_date_display }} в выбранном городе пока нет подрядчиков категории «{{ form.category }}». Попробуйте выбрать другой город или категорию.</p></div></div>
+        {% else %}<div class="notice empty"><span>⌕</span><div><h2>Подрядчики есть, но условия не совпали</h2><p>На {{ result.event_date_display }} мы проверили {{ result.local_count }} профилей категории «{{ form.category }}» в городе {{ form.city }}.</p></div></div><div class="stats"><div><b>{{ result.exclusions.busy }}</b><span>заняты в эту дату</span></div><div><b>{{ result.exclusions.format }}</b><span>не работают с форматом</span></div><div><b>{{ result.exclusions.budget }}</b><span>превышают бюджет</span></div><div><b>{{ result.exclusions.duration }}</b><span>не подходят по длительности</span></div></div><p class="stats-note">Один профиль может учитываться сразу в нескольких причинах.</p>{% endif %}
       {% endif %}
     </section>
+
+    <section class="content-section" id="how"><div class="section-title"><span class="step">03</span><div><div class="eyebrow">Прозрачный процесс</div><h2>Как это работает</h2></div></div><div class="process-grid">
+      <article><b>01</b><h3>Параметры</h3><p>Вы задаёте город, дату, категорию, формат, бюджет, длительность и при желании язык.</p></article><article><b>02</b><h3>Фильтрация</h3><p>Профили проверяются по обязательным условиям без случайного выбора.</p></article><article><b>03</b><h3>Календарь</h3><p>Busy dates исключают подрядчиков, занятых в выбранную дату.</p></article><article><b>04</b><h3>Ранжирование</h3><p>Детерминированная оценка формирует TOP-3 и прозрачное объяснение.</p></article>
+    </div></section>
+    <section class="content-section about" id="about"><div><div class="eyebrow">О сервисе</div><h2>EventMatch AI</h2><p>EventMatch AI — демонстрационный сервис подбора event-подрядчиков. В датасете 66 профилей из разных категорий и городов; учитываются календарь, параметры события и прозрачные объяснения.</p><p>Сервис не выполняет бронирование и не отправляет заявки подрядчикам.</p></div><span class="big-number">66<small>профилей</small></span></section>
+    <section class="content-section assistant" id="assistant"><div class="assistant-copy"><div class="eyebrow">Локально, без API</div><h2>EventMatch AI Assistant</h2><span class="demo-label">Демо-ассистент</span><p>Выберите вопрос — ответ формируется локально. OpenAI API не подключён.</p><div class="question-list">{% for question in ['Как выбрать подрядчика?', 'Почему показали меньше трёх?', 'Что означает совпадение?', 'Почему выдача изменилась после смены даты?', 'Что такое синтетический профиль?'] %}<button type="button" data-question="{{ question }}">{{ question }}</button>{% endfor %}</div></div><div class="assistant-answer" aria-live="polite"><span>Ответ ассистента</span><p id="assistant-response">Выберите один из предложенных вопросов.</p><label><span>Или задайте вопрос</span><input id="assistant-input" type="text" placeholder="Введите вопрос"></label><button type="button" id="assistant-send">Спросить</button></div></section>
   </main>
-  <footer><span>EventMatch AI</span><p>Детерминированный подбор на основе параметров профиля</p></footer>
+  <footer><div><strong>EventMatch AI</strong><p>Умный и прозрачный подбор event-подрядчиков</p></div><div><b>HackAlem AI • Case #79-lite</b><p>Demo 2026</p></div><p>Сервис не выполняет бронирование и не отправляет заявки подрядчикам.</p></footer>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
-</html>
+</body></html>

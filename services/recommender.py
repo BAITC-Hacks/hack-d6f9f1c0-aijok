@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -145,23 +146,31 @@ def _score(contractor: Contractor, query: dict[str, Any]) -> tuple[float, dict[s
 
 def _explanation(contractor: Contractor, query: dict[str, Any]) -> str:
     budget_left = query["budget"] - contractor.price
-    parts = [f"Цена от {contractor.price:,} ₸ укладывается в бюджет с запасом {budget_left:,} ₸".replace(",", " ")]
-    parts.append(f"профиль работает с форматом «{query['event_format']}»")
+    price = f"{contractor.price:,}".replace(",", " ")
+    reserve = f"{budget_left:,}".replace(",", " ")
+    sentences = [f"Стоимость от {price} ₸ укладывается в бюджет, запас составляет {reserve} ₸."]
+    fit = f"Подрядчик работает с форматом «{query['event_format']}»"
     if query["language"]:
         if query["language"] in contractor.languages:
-            parts.append(f"поддерживает {query['language']} язык")
+            fit += f" и поддерживает {query['language']} язык"
         else:
-            parts.append(f"выбранный {query['language']} язык не указан, доступны: {', '.join(contractor.languages)}")
+            fit += f"; выбранный {query['language']} язык не указан, в профиле доступны: {', '.join(contractor.languages)}"
+    else:
+        fit += f"; языки профиля: {', '.join(contractor.languages)}"
+    sentences.append(fit + ".")
     if query["duration"] is not None:
         if contractor.max_hours is None:
-            parts.append("ограничение по длительности для этой услуги не применяется")
+            sentences.append(f"Запрошенная длительность — {query['duration']:g} ч, а ограничение длительности для этой услуги не применяется.")
         else:
-            parts.append(f"лимит {contractor.max_hours:g} ч покрывает запрошенные {query['duration']:g} ч")
-    sentence = "; ".join(parts) + "."
-    detail = contractor.description.split(".")[0].strip()
+            sentences.append(f"Лимит профиля {contractor.max_hours:g} ч покрывает запрошенные {query['duration']:g} ч.")
+    # Pick actual profile information, skipping empty introductions and greetings.
+    fragments = [part.strip(" -—") for part in re.split(r"(?<=[.!?])\s+", contractor.description)]
+    meaningless = re.compile(r"^(меня зовут\b|приветствую\b|здравствуйте\b|привет\b)", re.IGNORECASE)
+    detail = next((part for part in fragments if len(part) >= 20 and not meaningless.search(part)), "")
     if detail:
-        sentence += f" Из профиля: {detail[:180].rstrip()}" + ("…" if len(detail) > 180 else ".")
-    return sentence
+        detail = detail[:180].rstrip(" .") + ("…" if len(detail) > 180 else ".")
+        sentences.append(f"Из описания профиля: {detail}")
+    return " ".join(sentences[:4])
 
 
 def recommend(contractors: list[Contractor], query: dict[str, Any], limit: int = 3) -> dict[str, Any]:
@@ -202,4 +211,5 @@ def recommend(contractors: list[Contractor], query: dict[str, Any], limit: int =
         "eligible_count": len(ranked),
         "local_count": len(local),
         "exclusions": exclusions,
+        "event_date_display": query["event_date"].strftime("%d.%m.%Y"),
     }

@@ -102,3 +102,26 @@ def test_rejects_invalid_dates(contractors, event_date):
     raw = {"city": "Алматы", "event_date": event_date, "event_format": "свадьба", "category": "Фотограф", "budget": "1000000"}
     with pytest.raises(ValueError):
         validate_request(raw, categories_from(contractors))
+
+@pytest.mark.parametrize("budget", ["150000", "200000", "800000", "1000000"])
+def test_accepts_expected_budget_values(contractors, budget):
+    validated = validate_request({"city": "Алматы", "event_date": "2026-09-23", "event_format": "свадьба", "category": "Фотограф", "budget": budget}, categories_from(contractors))
+    assert validated["budget"] == int(budget)
+
+
+def test_explanation_is_detailed_deterministic_and_has_no_empty_greeting(contractors):
+    result = recommend(contractors, query(duration=4.0))
+    repeated = recommend(contractors, query(duration=4.0))
+    assert [item["explanation"] for item in result["results"]] == [item["explanation"] for item in repeated["results"]]
+    for item in result["results"]:
+        explanation = item["explanation"]
+        assert 2 <= explanation.count(".") <= 4
+        assert "запас составляет" in explanation
+        assert "свадьба" in explanation
+        assert not any(greeting in explanation.lower() for greeting in ("меня зовут", "приветствую", "здравствуйте"))
+
+
+def test_result_has_human_readable_date_without_changing_busy_date_type(contractors):
+    result = recommend(contractors, query())
+    assert result["event_date_display"] == "23.09.2026"
+    assert all(isinstance(item.busy_dates, frozenset) for item in contractors)
