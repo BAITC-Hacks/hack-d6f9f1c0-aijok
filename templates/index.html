@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="EventMatch AI — прозрачный подбор event-подрядчиков">
+  <title>EventMatch AI — умный подбор подрядчиков</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body id="home">
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <a class="brand" href="#home"><span class="brand-mark">E</span><span>EventMatch <b>AI</b></span></a>
+    <button class="menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false">☰</button>
+    <nav class="main-nav" aria-label="Основная навигация">
+      <a href="#home">Главная</a><a href="#how">Как это работает</a><a href="#about">О сервисе</a><a href="#assistant">ИИ-ассистент</a>
+    </nav>
+    <div class="account-nav">
+      {% if current_user %}<span>Здравствуйте, <b>{{ current_user.name }}</b></span><form method="post" action="{{ url_for('logout') }}"><button class="link-button" type="submit">Выйти</button></form>
+      {% else %}<a href="{{ url_for('login') }}">Войти</a><a class="signup-link" href="{{ url_for('register') }}">Регистрация</a>{% endif %}
+    </div>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+    <section class="hero">
+      <div class="eyebrow">Подбор без случайностей</div>
+      <h1>Умный подбор<br><span>event-подрядчиков</span></h1>
+      <p>Задайте параметры события — система проверит доступность, бюджет и формат и покажет до трёх наиболее подходящих исполнителей.</p>
+      <div class="hero-metrics"><span><b>66</b> профилей</span><span><b>17</b> категорий</span><span><b>3</b> региона</span></div>
+    </section>
+
+    <section class="search-panel" aria-labelledby="form-heading">
+      <div class="panel-heading"><div><span class="step">01</span><h2 id="form-heading">Расскажите о мероприятии</h2></div><p><span>*</span> Обязательные поля</p></div>
+      <form method="post" action="#results" id="match-form">
+        <div class="form-grid">
+          <label><span>Город <em>*</em></span><select name="city" required><option value="" disabled {% if not form.city %}selected{% endif %}>Выберите город</option>{% for item in cities %}<option value="{{ item }}" {% if form.city == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+          <label><span>Дата мероприятия <em>*</em></span><input name="event_date" class="date-input" inputmode="numeric" autocomplete="off" placeholder="ДД.ММ.ГГГГ" pattern="\d{2}\.\d{2}\.\d{4}" maxlength="10" value="{% if form.event_date %}{{ form.event_date[8:10] ~ '.' ~ form.event_date[5:7] ~ '.' ~ form.event_date[0:4] if '-' in form.event_date else form.event_date }}{% endif %}" data-min-date="23.09.2026" data-max-date="31.12.2026" required><small>Допустимый период: 23.09.2026–31.12.2026</small></label>
+          <label><span>Тип мероприятия <em>*</em></span><select name="event_format" required><option value="" disabled {% if not form.event_format %}selected{% endif %}>Выберите формат</option>{% for item in event_formats %}<option value="{{ item }}" {% if form.event_format == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select></label>
+          <label><span>Категория подрядчика <em>*</em></span><select name="category" required><option value="" disabled {% if not form.category %}selected{% endif %}>Кого ищете?</option>{% for item in categories %}<option value="{{ item }}" {% if form.category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+          <label><span>Бюджет, ₸ <em>*</em></span><input name="budget" type="number" min="1" step="1" placeholder="Например, 1 000 000" value="{{ form.budget or '' }}" required></label>
+          <label><span>Длительность, часов</span><input name="duration" type="number" min="0.1" max="24" step="any" placeholder="Например, 6" value="{{ form.duration or '' }}"></label>
+          <label><span>Предпочтительный язык</span><select name="language"><option value="">Не имеет значения</option>{% for item in languages %}<option value="{{ item }}" {% if form.language == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select></label>
+          <button class="submit" type="submit"><span>Подобрать подрядчиков</span><b>→</b></button>
+        </div>
+      </form>
+    </section>
+
+    <section class="results" id="results" aria-live="polite">
+      {% if error %}<div class="notice error"><span>!</span><div><h2>Проверьте параметры</h2><p>{{ error }}</p></div></div>{% endif %}
+      {% if result %}
+        {% if result.state == 'found' %}
+          <div class="results-heading"><div><span class="step">02</span><h2>Подходящие подрядчики</h2></div><p>Найдено: <b>{{ result.eligible_count }}</b></p></div>
+          {% if result.eligible_count < 3 %}<div class="notice compact"><span>i</span><p>Это все подходящие профили ({{ result.eligible_count }}): остальные не прошли обязательные условия.</p></div>{% endif %}
+          <div class="cards">{% for item in result.results %}<article class="card">
+            <div class="card-top"><div class="avatar">{{ item.name[0] }}</div><div class="identity"><div class="category">{{ item.categories|join(' · ') }}</div><h3>{{ item.name }}</h3><div class="location">⌖ {{ item.city }}</div></div>{% if item.synthetic %}<span class="synthetic">Синтетический профиль</span>{% endif %}</div>
+            <div class="price"><small>Стоимость от</small><strong>{{ "{:,}".format(item.price).replace(',', ' ') }} ₸</strong></div>
+            <dl class="facts"><div><dt>Форматы</dt><dd>{% for value in item.event_formats %}<span>{{ value }}</span>{% endfor %}</dd></div><div><dt>Языки</dt><dd>{% for value in item.languages %}<span>{{ value }}</span>{% endfor %}</dd></div>{% if item.max_hours is not none %}<div><dt>Макс. длительность</dt><dd><b>{{ item.max_hours|int if item.max_hours == item.max_hours|int else item.max_hours }} часов</b></dd></div>{% endif %}</dl>
+            <div class="why"><h4><span>✓</span> Почему подходит</h4><p>{{ item.explanation }}</p></div>
+            <div class="score"><span>Совпадение</span><b>{{ item.score|round|int }} / 100</b></div>
+            <div class="contact"><div><strong>Связаться с подрядчиком</strong><small>Контакт скрыт в демо</small></div><div class="contact-actions"><button type="button" data-modal-message="Связь с подрядчиком доступна после входа. Функция заявок не входит в демо-версию.">Написать</button><button type="button" class="secondary" data-modal-message="Демонстрационный режим: контакт подрядчика скрыт.">Позвонить</button></div></div>
+          </article>{% endfor %}</div>
+        {% elif result.state == 'no_category_in_city' %}<div class="notice empty"><span>⌕</span><div><h2>В этом городе категория не представлена</h2><p>В городе {{ form.city }} пока нет подрядчиков категории «{{ form.category }}». Попробуйте другой город или категорию.</p></div></div>
+        {% else %}<div class="notice empty"><span>⌕</span><div><h2>Подрядчики есть, но условия не совпали</h2><p>Мы проверили {{ result.local_count }} профилей категории «{{ form.category }}» в городе {{ form.city }}.</p></div></div><div class="stats"><div><b>{{ result.exclusions.busy }}</b><span>заняты в эту дату</span></div><div><b>{{ result.exclusions.format }}</b><span>не работают с форматом</span></div><div><b>{{ result.exclusions.budget }}</b><span>превышают бюджет</span></div><div><b>{{ result.exclusions.duration }}</b><span>не подходят по длительности</span></div></div><p class="stats-note">Один профиль может учитываться сразу в нескольких причинах.</p>{% endif %}
+      {% endif %}
+    </section>
+
+    <section class="info-section" id="how"><div class="section-heading"><span>Прозрачный процесс</span><h2>Как работает EventMatch AI</h2><p>От параметров мероприятия до объяснённой рекомендации — четыре понятных этапа.</p></div><div class="process-grid"><article><b>01</b><h3>Параметры</h3><p>Вы задаёте город, дату, формат, категорию и бюджет.</p></article><article><b>02</b><h3>Проверка условий</h3><p>Система проверяет формат, бюджет и допустимую длительность.</p></article><article><b>03</b><h3>Календарь</h3><p>Подрядчики, занятые в выбранную дату, исключаются из выдачи.</p></article><article><b>04</b><h3>Ранжирование</h3><p>Детерминированный алгоритм ранжирует кандидатов и объясняет результат.</p></article></div></section>
+
+    <section class="about-section" id="about"><div><span class="eyebrow">О сервисе</span><h2>Меньше ручного поиска.<br>Больше прозрачности.</h2><p>EventMatch AI — демонстрационный сервис интеллектуального подбора event-подрядчиков в Казахстане. Он анализирует каталог из 66 анонимизированных профилей и сокращает список до нескольких подходящих кандидатов.</p><p>Главная ценность — не просто сортировка, а понятное объяснение причин каждой рекомендации. Сервис не выполняет реальное бронирование.</p></div><div class="feature-list"><span>Алматы / Астана / Зарубежье</span><span>66 профилей</span><span>17 категорий</span><span>Календарь доступности</span><span>Детерминированный подбор</span></div></section>
+
+    <section class="assistant-section" id="assistant"><div class="assistant-copy"><span class="eyebrow">Демо-ассистент</span><h2>EventMatch AI Assistant</h2><p>Локальный помощник отвечает на вопросы о подборе. Он работает по заранее заданным правилам и не использует внешнюю AI-модель.</p></div><div class="chat"><div class="chat-head"><span class="assistant-avatar">AI</span><div><b>EventMatch Assistant</b><small><i></i> Демо-режим</small></div></div><div class="chat-log" id="chat-log" aria-live="polite"><div class="bubble assistant">Здравствуйте! Выберите один из вопросов — я объясню, как работает сервис.</div></div><div class="quick-questions"><button type="button">Как выбрать подрядчика?</button><button type="button">Почему мне показали только двух?</button><button type="button">Что означает совпадение?</button><button type="button">Почему изменилась выдача после смены даты?</button><button type="button">Что такое синтетический профиль?</button></div><form class="chat-form" id="assistant-form"><input aria-label="Вопрос ассистенту" placeholder="Задайте вопрос о сервисе"><button type="submit">→</button></form></div></section>
+  </main>
+
+  <footer><div class="footer-brand"><a class="brand" href="#home"><span class="brand-mark">E</span><span>EventMatch <b>AI</b></span></a><p>Умный и прозрачный подбор event-подрядчиков</p></div><nav><b>Навигация</b><a href="#home">Главная</a><a href="#how">Как это работает</a><a href="#about">О сервисе</a><a href="#assistant">ИИ-ассистент</a></nav><div class="footer-meta"><b>HackAlem AI • Case #79-lite</b><span>Demo 2026</span><p>Сервис не выполняет бронирование и не отправляет заявки подрядчикам.</p></div></footer>
+
+  <dialog id="demo-modal"><button class="modal-close" aria-label="Закрыть">×</button><div class="modal-icon">i</div><h3>Демонстрационная функция</h3><p></p><button class="modal-confirm">Понятно</button></dialog>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
