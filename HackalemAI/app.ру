@@ -12,7 +12,7 @@ def main():
     try:
         contractors = load_data(DATA_FILE)
     except FileNotFoundError:
-        print("Ошибка: файл hackathon-dataset-anonymized.jsonl не найден.")
+        print("Ошибка: файл hackathon-dataset-anonymized.csv не найден.")
         return
 
     print(f"Загружено профилей: {len(contractors)}\n")
