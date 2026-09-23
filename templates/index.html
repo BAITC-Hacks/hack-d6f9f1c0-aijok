@@ -46,10 +46,10 @@
             <select name="category" required><option value="" disabled {% if not form.category %}selected{% endif %}>Кого ищете?</option>{% for item in categories %}<option value="{{ item }}" {% if form.category == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
           </label>
           <label><span>Бюджет, ₸ <em>*</em></span>
-            <input name="budget" type="number" min="1" step="1000" placeholder="Например, 1 000 000" value="{{ form.budget or '' }}" required>
+            <input name="budget" type="number" min="1" step="1" placeholder="Например, 1 000 000" value="{{ form.budget or '' }}" required>
           </label>
           <label><span>Длительность, часов</span>
-            <input name="duration" type="number" min="0.5" max="24" step="0.5" placeholder="Например, 6" value="{{ form.duration or '' }}">
+            <input name="duration" type="number" min="0.1" max="24" step="any" placeholder="Например, 6" value="{{ form.duration or '' }}">
           </label>
           <label><span>Предпочтительный язык</span>
             <select name="language"><option value="">Не имеет значения</option>{% for item in languages %}<option value="{{ item }}" {% if form.language == item %}selected{% endif %}>{{ item|capitalize }}</option>{% endfor %}</select>
