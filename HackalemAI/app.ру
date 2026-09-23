@@ -1,0 +1,114 @@
+from datetime import datetime
+from recommender import load_data, find_contractors
+
+
+DATA_FILE = "hackathon-dataset-anonymized.csv"
+
+
+def main():
+    print("=== HackAlem AI ===")
+    print("Умный подбор event-подрядчиков\n")
+
+    try:
+        contractors = load_data(DATA_FILE)
+    except FileNotFoundError:
+        print("Ошибка: файл hackathon-dataset-anonymized.csv не найден.")
+        return
+
+    print(f"Загружено профилей: {len(contractors)}\n")
+
+    city = input("Город: ").strip()
+
+    date = input("Дата (ДД.ММ.ГГГГ): ").strip()
+
+    try:
+        date = datetime.strptime(
+            date,
+            "%d.%m.%Y"
+        ).strftime("%Y-%m-%d")
+    except ValueError:
+        print("Неверный формат даты.")
+        return
+
+    event_type = input(
+        "Тип мероприятия: "
+    ).strip()
+
+    category = input(
+        "Категория подрядчика: "
+    ).strip()
+
+    try:
+        budget = int(
+            input("Бюджет (₸): ").replace(" ", "")
+        )
+    except ValueError:
+        print("Бюджет должен быть числом.")
+        return
+
+    duration_text = input(
+        "Длительность в часах (можно пропустить): "
+    ).strip()
+
+    if duration_text:
+        try:
+            duration = int(duration_text)
+        except ValueError:
+            print("Длительность должна быть числом.")
+            return
+    else:
+        duration = None
+
+    language = input(
+        "Язык (можно пропустить): "
+    ).strip()
+
+    if not language:
+        language = None
+
+    result = find_contractors(
+        contractors,
+        city,
+        date,
+        event_type,
+        category,
+        budget,
+        duration,
+        language
+    )
+
+    print("\n" + "=" * 50)
+    print(result["message"])
+
+    for i, contractor in enumerate(
+        result["results"],
+        start=1
+    ):
+        print("\n" + "-" * 50)
+
+        print(f"{i}. {contractor['name']}")
+        print(f"Категория: {contractor['category']}")
+        print(f"Город: {contractor['city']}")
+
+        price = contractor["price"]
+
+        if price is not None:
+            print(
+                f"Цена: от {price:,} ₸".replace(",", " ")
+            )
+        else:
+            print("Цена: не указана")
+
+        if contractor["synthetic"]:
+            print("Профиль: синтетический")
+        else:
+            print("Профиль: исходный")
+
+        print("Почему:")
+        print(contractor["explanation"])
+
+    print("\n" + "=" * 50)
+
+
+if __name__ == "__main__":
+    main() 
